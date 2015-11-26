@@ -1,0 +1,209 @@
+---
+title: 'ToothGrowth Analysis: Full Factorial ANOVA'
+author: "Len Greski"
+date: "November 25, 2015"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r ref.label="loadData", echo=FALSE, include=FALSE,warning=FALSE}
+
+```
+
+# Background
+
+The course project for *Statistical Inference* within the Johns Hopkins University Data Science curriculum on Coursera includes an analysis of the [ToothGrowth data set](https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/ToothGrowth.html) from the R Datasets package. Students were instructed to use techniques taught in the class (basic hypothesis tests or confidence intervals) to analyze the data. On the course Discussion Forum, students discussed a variety of ways to analyze this data set, and one student asserted that the best way to analyze the ToothGrowth data was as a full factorial analysis of variance, a topic that is not covered in the *Statistical Inference* course. 
+
+In response to students' questions about how the factorial analysis of variance works, I agreed to post a factorial design analysis of variance solution to the problem. During the class, I discovered that Robert Kabacoff uses the ToothGrowth data set for this very purpose in [<em>R in Action</em>](https://www.manning.com/books/r-in-action-second-edition). Furthermore, the code for this analysis is available on Kabacoff's [RiA github repository](https://github.com/kabacoff/RiA2/blob/master/Ch09%20Analysis%20of%20Variance.R), so it is publicly available. 
+
+In this report we will discuss the factorial ANOVA model, relating it to concepts taught in the *Statistical Inference* course. Although the bulk of the analysis is based on code from *R in Action* (RiA), we will make adjustments to simplify the analysis, explain concepts that are new to students in *Statistical Inference*, or connect specific *RiA* points to content from the *Statistical Inference* course. 
+
+# Executive Summary
+
+In the 1940s, researchers were interested developing bioassays of vitamin C, because the Canadian government had difficulty providing natural sources of the vitamin to their armed forces during most of the year (Crampton, p. 491). Because guinea pigs (like humans) do not metabolize their own vitamin C, the Winter Institute of Anatomy and Biology developed a bioassay of vitamin C by testing it on guinea pigs. Analysis of the ToothGrowth data from Crompton's 1947 analysis in the *Journal of Nutrition* demonstrates that:
+
+* Increasing dose is associated with higher tooth growth,
+* Orange Juice produced more tooth growth than Vitamin C at lower doses (0.5 and 1.0 mg), and
+* Both Orange Juice and Vitamin C produced equal tooth growth at a 2.0 mg dose.
+
+Relative to the techniques taught in the *Statistical Inference* course, there are two significant findings:
+
+* One way analysis of variance on the independent variables produces results consistent with t-tests to compare group means within an effect, but 
+* Analysis of variance allowed us to identify a main effect for supplement type that was  suppressed by dosage. 
+
+
+# Exploratory Data Analysis
+Typically, students in the Data Science Specialization are asked to begin each project with an exploratory data analysis. In Kabacoff's analysis, he begins with a demonstration that the experimental design for the study is a 2x3 factorial model: two levels of supplement type (`supp`), and three levels of dosage (`dose`). 
+
+```{r expData1, echo=TRUE}
+attach(ToothGrowth)
+kable(table(supp,dose))
+
+```
+
+Because the number of guinea pigs in each of the six cells of the experimental design is equivalent, this design qualifies as a "balanced" design. When a design is unbalanced, changing the order of effects in the analysis can change the results. The balanced design alleviates the need for us to manage the order of the effects specifications in the analysis of variance.  
+
+Next, Kabacoff reports the means and standard deviations for each cell in the design. 
+
+### Figure 1: Means and Standard Deviations by Supplement / Dosage Combination
+```{r expData2, echo=TRUE}
+theMeans <- aggregate(len, by=list(supp,dose), FUN=mean)
+names(theMeans)[names(theMeans) == "x"] <- "Mean"
+theSDs <- aggregate(len, by=list(supp,dose), FUN=sd)
+StdDev <- theSDs$x
+kable(cbind(theMeans,StdDev))
+
+```
+
+To provide a more visual representation of the two main effects, we include boxplots for `dose` and `supp`. Note that these were not included in Kabacoff's original analysis.
+
+```{r }
+par(mfrow=c(1,2))
+boxplot(len ~ dose,data=ToothGrowth,
+     xlab="Vitamin C dose (mg)",
+     ylab="Tooth length (microns)",
+     main="Guinea Pigs' Tooth Growth")
+boxplot(len ~ supp,data=ToothGrowth,
+     xlab="Delivery Mechanism",
+     ylab="Tooth length (microns)",
+      main="Guinea Pigs' Tooth Growth")
+
+```
+
+Given the techniques that were taught in the *Statistical Inference* course, the next step in this analysis would be to establish a set of null and alternate hypotheses to test, or to generate confidence intervals for some subset of factors and compare them. Both the  number and nature of tests to be conducted (e.g. one-tailed versus two-tailed, tests on an individual independent variable versus combination of the two independent variables, etc.) are left to the student's discretion. 
+
+Kabacoff's analysis includes an interaction plot that highlights the 95% confidence intervals across supplement type and dosage levels. We include it here because it summarises all the potential tests to be conducted in a single chart. The plot illustrates that at dosages of 0.5 and 1.0 mg of ascorbic acid, Orange Juice is associated with higher tooth growth because the confidence intervals do not overlap. At dosage of 2.0 mg, however, tooth growth does not vary significantly by supplement type. It also demonstrates that increases in dosage are associated with increases in tooth growth.  
+
+### Figure 2: Tooth Growth by Supplement Type and Dosage
+
+```{r }
+library(gplots)
+plotmeans(len ~ interaction(supp, dose, sep=" "),
+          connect=list(c(1, 3, 5),c(2, 4, 6)), 
+          col=c("red","darkgreen"),
+          main = "Interaction Plot with 95% CIs", 
+          xlab="Treatment and Dose Combination")
+
+```
+
+Note that the above chart does not account for the fact that we're conducting multiple comparisons of means, which increases our likelihood of a type 1 error: rejecting the null hypothesis when it is in fact true. Since we have 6 means in the study, we can make up to $\binom {6}{2} = 15$ comparisons of means, and the probability of at least one type 1 error among 15 comparisons is 0.537, or almost 54% [(1)](https://en.wikipedia.org/wiki/Multiple_comparisons_problem). Due to the multiple comparisons problem, analysis of variance is the preferred technique with with to analyze this data. 
+
+# Analysis of Variance
+
+Given the importance of analysis of variance (ANOVA) models across numerous disciplines in the natural and social science, *R in Action* devotes an entire chapter to different flavors of ANOVA models, including:
+
+* One-way ANOVA,
+* One-way Analysis of Covariance (ANCOVA),
+* Two-way factorial ANOVA, 
+* Repeated measures ANOVA, and 
+* Multivariate Analysis of Variance (MANOVA). 
+
+Analysis of Variance is particularly well suited for analyses that are organized with an experimental design: placing subjects randomly into specific categories of test and control groups, to test the effectiveness of a "test" treatment versus a control group. For a more detailed explanation of the various ANOVA models, the reader is referred to *R in Action*, pp. 212 - 238. 
+
+As stated earlier, the ToothGrowth data set is used to illustrate the concepts of two-way factorial ANOVA, where the dependent variable is assessed across groups formed by the combination of two factor variables, `dose` and `supp`. There are two major benefits of the analysis of variance over paired comparisons of means, including:
+
+* ANOVA tests the overall equality across means to control the Type 1 error rate, and
+* ANOVA provides capabilities to test subgroups beyond simple pairwise comparisons of means, while simultaneously controlling the Type 1 error rate. 
+
+The basic analysis of variance output from R includes an F-test that tests the following hypothesis:
+
+$$H_{null}: \mu_1 = \mu_2 = \mu_3 = \mu_4 = \mu_5 = \mu_6 $$
+$$H_{alt}: \mu_1 \neq \mu_2 \neq \mu_3 \neq \mu_4 \neq \mu_5 \neq \mu_6 $$
+
+Since F is the ratio of between groups variance to within groups variance [2](https://en.wikipedia.org/wiki/F-test), an F value of 1.0 represents the null hypothesis: all means are equal. When F is large enough to exceed a critical value given the number of groups and degrees of freedom, we reject the null hypothesis and conclude that there is at least one difference between the group means. 
+
+Isolating where the differences are across the different groups requires post hoc comparisons of means, such as [Tukey's Honest Significant Difference, or HSD](https://en.wikipedia.org/wiki/Tukey%27s_range_test) test. 
+
+We will begin our analysis by reviewing the one way main effects for `supp` and `dose` to illustrate how the results change as model terms are added.  
+
+```{r anova1,echo=TRUE}
+fit <- aov(len ~ supp )
+summary(fit)
+
+```
+
+The F value for the one way ANOVA of `len` by `supp` is 3.668, with 1,58 degrees of freedom. Since the probability value of the F-test is 0.0604, we fail to reject the null hypothesis that $\mu_1 = \mu_2$ at $\alpha = 0.05$.  By itself, supplement type (OJ vs. VC) appears to have no significant impact on tooth length. 
+
+Next, we look at the main effect for `dose`, which has 3 levels: 0.5mg, 1.0mg, and 2.0mg.  The `aov()` output reports an F value is 67.42 with 2,57 degrees of freedom. For this F-test, P > 0.001, so we reject the null hypothesis that $\mu_1 = \mu_2 = \mu_3$ at $\alpha = 0.05$.
+
+```{r anova2,echo=TRUE}
+fit <- aov(len ~ dose)
+summary(fit)
+
+```
+
+Substantively the test result means that differences in dosage are associated with different levels of tooth growth. We would need to conduct post hoc tests to quantify the effects more specifically, such as "larger doses are associated with increased tooth growth." 
+
+Finally, we report the two-way factorial ANOVA test along with the model coefficients, as presented in *R in Action*. When given a model forumla is specified as an interaction effect, the `aov()` function automatically includes the relevant main effects in the model. 
+
+```{r anova3,echo=TRUE}
+fit <- aov(len ~ supp * dose)
+summary(fit)
+
+```
+
+Since the `len ~ dose` model showed a significant difference in means, we would expect the factorial model to render the same result, which it does. An F value of 15.57 with 5,54 degrees of freedom has a p-value of 0.002, which is significant at $\alpha = 0.05$. 
+
+Also, we notice that after accounting for the other effects, the `supp` effect is now significantly different from zero. That is, by controlling for the level of dosage and the interaction effect `dose * supp`, we see that there is a significant, independent effect for supplement type (p < 0.001). 
+
+Looking at the specific model coefficients, we observe that they are reported as changes relative to a base group, listed as the intercept. The intercept is simply the cell with the lowest factor levels as defined with the as.factor() function. 
+
+```{r anovaCoeff}
+fit$coefficients
+```
+
+In the ToothGrowth data, the intercept represents the OJ / Dose 0.5 cell. We can rebuild our original table of means by using the coefficients as follows, adding the relevant effects to arrive at the cell means.
+
+```{r groupedCoefficients}
+Supplement <- c("OJ", "VC", "OJ", "VC", "OJ", "VC")
+Dosage <- c("0.5","0.5","1.0","1.0","2.0","2.0")
+Mean <- c(13.23, 13.23 - 5.25, 13.23 + 9.47, 13.23 + 9.47  - 5.25 - 0.68,13.23 + 12.83,
+     13.23 + 12.83 - 5.25 + 5.33)
+kable(data.frame(Supplement,Dosage,Mean))
+```
+
+Note that the results match those we produced by aggregating the data earlier in the analysis. 
+
+The entire analysis may be summarized visually with the `interaction2wt()` plot that Kabacoff uses in closing to summarize the analysis. 
+
+```{r int2way}
+interaction2wt(len ~ supp * dose,
+     main="Tooth Length: main effects & 2-way interactions")
+
+```
+
+# Conclusions
+
+The Analysis of Variance (ANOVA) techinque is very useful for studies that are organized using experimental designs that include test and control groups. We've compared the analysis to a series of hypothesis tests / comparisons of means, and illustrated the value of accounting for the interactions between factor variables. In the case of the ToothGrowth data set, a main effect that was not significantly different from zero when analyzed by itself became significant after we accounted for a third variable. This is known as a suppression effect, where the relationship between Y and X is "suppressed" by a third variable [(3)](http://stats.stackexchange.com/questions/73869/suppression-effect-in-regression-definition-and-visual-explanation-depiction). 
+
+# Endnotes
+
+[(1)](https://en.wikipedia.org/wiki/Multiple_comparisons_problem) Multiple Comparisons Problem, Wikipedia, retrieved November 25, 2015. 
+
+[(2)](https://en.wikipedia.org/wiki/F-test) F-test, Wikipedia, retrieved November 25, 2015.
+
+[(3)](http://stats.stackexchange.com/questions/73869/suppression-effect-in-regression-definition-and-visual-explanation-depiction) Suppression Effect in Regression, Cross Validated Stack Exchange Website, retrieved November 25, 2015. 
+
+### References
+
+Crampton, E. W. (1947) The growth of the odontoblast of the incisor teeth as a criterion of vitamin C intake of the guinea pig. [<em>The Journal of Nutrition</em>](http://jn.nutrition.org/content/33/5/491.full.pdf) 33(5): 491 - 104. 
+
+Kabacoff, Robert (2015) -- *R in Action: Data analysis and graphics with R, Second Edition,* Manning Publications Co., Shelter Island, New York. 
+
+# Appendix
+
+```{r loadData, echo=FALSE,warning=FALSE}
+packageList <- c("datasets","multcomp", "gplots", "car", "HH", "effects",  
+               "rrcov", "mvoutlier","knitr")                      
+aResult <- lapply(packageList,require,character.only=TRUE)
+
+data(ToothGrowth)
+attach(ToothGrowth)
+dose <- factor(dose)
+```
+
+
+
+
+
