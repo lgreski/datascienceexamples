@@ -29,8 +29,8 @@ In the 1940s, researchers were interested developing bioassays of vitamin C, bec
 
 Relative to the techniques taught in the *Statistical Inference* course, there are two significant findings:
 
-* One way analysis of variance on the independent variables produces results consistent with t-tests to compare group means within an effect, but 
-* Analysis of variance allowed us to identify a main effect for supplement type that was  suppressed by dosage. 
+* One way analysis of variance on the independent variables produces results consistent with t-tests to compare group means within an effect, and 
+* Analysis of variance allowed us to identify a main effect for supplement type that is  suppressed by dosage in a t-test. 
 
 
 # Exploratory Data Analysis
@@ -44,7 +44,7 @@ kable(table(supp,dose))
 
 Because the number of guinea pigs in each of the six cells of the experimental design is equivalent, this design qualifies as a "balanced" design. When a design is unbalanced, changing the order of effects in the analysis can change the results. The balanced design alleviates the need for us to manage the order of the effects specifications in the analysis of variance.  
 
-Next, Kabacoff reports the means and standard deviations for each cell in the design. 
+Next, Kabacoff reports the means and standard deviations for each cell in the design. Note that the code here is slightly modified from Kabacoff's version, so we can print both the means and standard deviations in a single table. 
 
 ### Figure 1: Means and Standard Deviations by Supplement / Dosage Combination
 ```{r expData2, echo=TRUE}
@@ -71,9 +71,9 @@ boxplot(len ~ supp,data=ToothGrowth,
 
 ```
 
-Given the techniques that were taught in the *Statistical Inference* course, the next step in this analysis would be to establish a set of null and alternate hypotheses to test, or to generate confidence intervals for some subset of factors and compare them. Both the  number and nature of tests to be conducted (e.g. one-tailed versus two-tailed, tests on an individual independent variable versus combination of the two independent variables, etc.) are left to the student's discretion. 
+Given the techniques that were taught in the *Statistical Inference* course, the next step in this analysis would be to establish a set of null and alternate hypotheses to test, or to generate confidence intervals for some subset of factors and compare them. Both the number and nature of tests to be conducted (e.g. one-tailed versus two-tailed, tests on an individual independent variable versus combination of the two independent variables, etc.) are left to the student's discretion. 
 
-Kabacoff's analysis includes an interaction plot that highlights the 95% confidence intervals across supplement type and dosage levels. We include it here because it summarises all the potential tests to be conducted in a single chart. The plot illustrates that at dosages of 0.5 and 1.0 mg of ascorbic acid, Orange Juice is associated with higher tooth growth because the confidence intervals do not overlap. At dosage of 2.0 mg, however, tooth growth does not vary significantly by supplement type. It also demonstrates that increases in dosage are associated with increases in tooth growth.  
+Kabacoff's analysis includes an interaction plot that highlights the 95% confidence intervals across supplement type and dosage levels. We include it here because it summarises all the potential tests to be conducted in a single chart. The plot illustrates that at dosages of 0.5 and 1.0 mg of ascorbic acid, Orange Juice is associated with higher tooth growth because the confidence intervals do not overlap. At dosage of 2.0 mg, however, tooth growth does not vary significantly by supplement type. The plot also demonstrates that increases in dosage are associated with increases in tooth growth, as the two lines that connect the dosage levels within a supplement type are [monotonically increasing](https://en.wikipedia.org/wiki/Monotonic_function) (1).  
 
 ### Figure 2: Tooth Growth by Supplement Type and Dosage
 
@@ -87,7 +87,7 @@ plotmeans(len ~ interaction(supp, dose, sep=" "),
 
 ```
 
-Note that the above chart does not account for the fact that we're conducting multiple comparisons of means, which increases our likelihood of a type 1 error: rejecting the null hypothesis when it is in fact true. Since we have 6 means in the study, we can make up to $\binom {6}{2} = 15$ comparisons of means, and the probability of at least one type 1 error among 15 comparisons is 0.537, or almost 54% [(1)](https://en.wikipedia.org/wiki/Multiple_comparisons_problem). Due to the multiple comparisons problem, analysis of variance is the preferred technique with with to analyze this data. 
+Note that the confidence intervals in the preceding chart do not account for the fact that we are conducting multiple comparisons of means. The process of multiple comparisons among means increases our likelihood of a type 1 error: rejecting a null hypothesis when it is in fact true. Since we have 6 means in the study, we can make up to $\binom {6}{2} = 15$ comparisons of means, and the probability of at least one type 1 error among 15 comparisons is 0.537, or almost 54% [(2)](https://en.wikipedia.org/wiki/Multiple_comparisons_problem). Due to the multiple comparisons problem, analysis of variance is preferred over multiple difference of means t-tests for analyzing this data. 
 
 # Analysis of Variance
 
@@ -99,9 +99,9 @@ Given the importance of analysis of variance (ANOVA) models across numerous disc
 * Repeated measures ANOVA, and 
 * Multivariate Analysis of Variance (MANOVA). 
 
-Analysis of Variance is particularly well suited for analyses that are organized with an experimental design: placing subjects randomly into specific categories of test and control groups, to test the effectiveness of a "test" treatment versus a control group. For a more detailed explanation of the various ANOVA models, the reader is referred to *R in Action*, pp. 212 - 238. 
+Analysis of Variance is particularly well suited for analyses that are organized with an experimental design: placing subjects randomly into specific categories of test and control groups to test the effectiveness of one or more types of a "test" treatment versus one or more control groups. For a more detailed explanation of the various ANOVA models, the reader is referred to *R in Action*, pp. 212 - 238. 
 
-As stated earlier, the ToothGrowth data set is used to illustrate the concepts of two-way factorial ANOVA, where the dependent variable is assessed across groups formed by the combination of two factor variables, `dose` and `supp`. There are two major benefits of the analysis of variance over paired comparisons of means, including:
+As stated earlier, the ToothGrowth data set is used to illustrate the concepts of two-way factorial ANOVA, where the dependent variable is assessed across groups formed by the combination of two factor variables, `dose` and `supp`. There are two major benefits of the analysis of variance over paired comparisons of means via t-tests, including:
 
 * ANOVA tests the overall equality across means to control the Type 1 error rate, and
 * ANOVA provides capabilities to test subgroups beyond simple pairwise comparisons of means, while simultaneously controlling the Type 1 error rate. 
@@ -111,7 +111,7 @@ The basic analysis of variance output from R includes an F-test that tests the f
 $$H_{null}: \mu_1 = \mu_2 = \mu_3 = \mu_4 = \mu_5 = \mu_6 $$
 $$H_{alt}: \mu_1 \neq \mu_2 \neq \mu_3 \neq \mu_4 \neq \mu_5 \neq \mu_6 $$
 
-Since F is the ratio of between groups variance to within groups variance [2](https://en.wikipedia.org/wiki/F-test), an F value of 1.0 represents the null hypothesis: all means are equal. When F is large enough to exceed a critical value given the number of groups and degrees of freedom, we reject the null hypothesis and conclude that there is at least one difference between the group means. 
+Since F is the ratio of between groups variance to within groups variance [(3)](https://en.wikipedia.org/wiki/F-test), an F value of 1.0 represents the null hypothesis: all means are equal. When F is large enough to exceed a critical value given the number of groups and degrees of freedom, we reject the null hypothesis and conclude that there is at least one difference between the group means. 
 
 Isolating where the differences are across the different groups requires post hoc comparisons of means, such as [Tukey's Honest Significant Difference, or HSD](https://en.wikipedia.org/wiki/Tukey%27s_range_test) test. 
 
@@ -135,7 +135,7 @@ summary(fit)
 
 Substantively the test result means that differences in dosage are associated with different levels of tooth growth. We would need to conduct post hoc tests to quantify the effects more specifically, such as "larger doses are associated with increased tooth growth." 
 
-Finally, we report the two-way factorial ANOVA test along with the model coefficients, as presented in *R in Action*. When given a model forumla is specified as an interaction effect, the `aov()` function automatically includes the relevant main effects in the model. 
+Finally, we report the two-way factorial ANOVA test along with the model coefficients, as presented in *R in Action*. When given a model forumla specified as an interaction effect, the `aov()` function automatically includes the relevant main effects in the model. 
 
 ```{r anova3,echo=TRUE}
 fit <- aov(len ~ supp * dose)
@@ -147,7 +147,7 @@ Since the `len ~ dose` model showed a significant difference in means, we would 
 
 Also, we notice that after accounting for the other effects, the `supp` effect is now significantly different from zero. That is, by controlling for the level of dosage and the interaction effect `dose * supp`, we see that there is a significant, independent effect for supplement type (p < 0.001). 
 
-Looking at the specific model coefficients, we observe that they are reported as changes relative to a base group, listed as the intercept. The intercept is simply the cell with the lowest factor levels as defined with the as.factor() function. 
+Looking at the specific model coefficients, we observe that they are reported as changes relative to a base group, listed as the intercept. The intercept is simply the cell with the lowest factor levels as defined with the `as.factor()` function. 
 
 ```{r anovaCoeff}
 fit$coefficients
@@ -158,14 +158,18 @@ In the ToothGrowth data, the intercept represents the OJ / Dose 0.5 cell. We can
 ```{r groupedCoefficients}
 Supplement <- c("OJ", "VC", "OJ", "VC", "OJ", "VC")
 Dosage <- c("0.5","0.5","1.0","1.0","2.0","2.0")
-Mean <- c(13.23, 13.23 - 5.25, 13.23 + 9.47, 13.23 + 9.47  - 5.25 - 0.68,13.23 + 12.83,
-     13.23 + 12.83 - 5.25 + 5.33)
+Mean <- c(13.23, 
+          13.23 - 5.25, 
+          13.23 + 9.47, 
+          13.23 + 9.47  - 5.25 - 0.68,
+          13.23 + 12.83,
+          13.23 + 12.83 - 5.25 + 5.33)
 kable(data.frame(Supplement,Dosage,Mean))
 ```
 
 Note that the results match those we produced by aggregating the data earlier in the analysis. 
 
-The entire analysis may be summarized visually with the `interaction2wt()` plot that Kabacoff uses in closing to summarize the analysis. 
+The entire analysis may be presented visually with the `interaction2wt()` plot that Kabacoff used in closing to summarize the analysis. 
 
 ```{r int2way}
 interaction2wt(len ~ supp * dose,
@@ -175,15 +179,17 @@ interaction2wt(len ~ supp * dose,
 
 # Conclusions
 
-The Analysis of Variance (ANOVA) techinque is very useful for studies that are organized using experimental designs that include test and control groups. We've compared the analysis to a series of hypothesis tests / comparisons of means, and illustrated the value of accounting for the interactions between factor variables. In the case of the ToothGrowth data set, a main effect that was not significantly different from zero when analyzed by itself became significant after we accounted for a third variable. This is known as a suppression effect, where the relationship between Y and X is "suppressed" by a third variable [(3)](http://stats.stackexchange.com/questions/73869/suppression-effect-in-regression-definition-and-visual-explanation-depiction). 
+The Analysis of Variance (ANOVA) techinque is very useful for studies that are organized using experimental designs that include test and control groups. We've compared the analysis to a series of hypothesis tests / comparisons of means, and illustrated the value of accounting for the interactions between factor variables. In the case of the ToothGrowth data set, a main effect that was not significantly different from zero when analyzed by itself became significant after we accounted for a third variable. This is known as a suppression effect, where the relationship between Y and X is "suppressed" by a third variable [(4)](http://stats.stackexchange.com/questions/73869/suppression-effect-in-regression-definition-and-visual-explanation-depiction), and becomes visible by controlling for the third variable within a statistical model. 
 
-# Endnotes
+# Footnotes
 
-[(1)](https://en.wikipedia.org/wiki/Multiple_comparisons_problem) Multiple Comparisons Problem, Wikipedia, retrieved November 25, 2015. 
+[(1)](https://en.wikipedia.org/wiki/Monotonic_function) *Monotonic Function*, Wikipedia, retrieved November 26, 2015. 
 
-[(2)](https://en.wikipedia.org/wiki/F-test) F-test, Wikipedia, retrieved November 25, 2015.
+[(2)](https://en.wikipedia.org/wiki/Multiple_comparisons_problem) *Multiple Comparisons Problem*, Wikipedia, retrieved November 25, 2015. 
 
-[(3)](http://stats.stackexchange.com/questions/73869/suppression-effect-in-regression-definition-and-visual-explanation-depiction) Suppression Effect in Regression, Cross Validated Stack Exchange Website, retrieved November 25, 2015. 
+[(3)](https://en.wikipedia.org/wiki/F-test) *F-test*, Wikipedia, retrieved November 25, 2015.
+
+[(4)](http://stats.stackexchange.com/questions/73869/suppression-effect-in-regression-definition-and-visual-explanation-depiction) *Suppression Effect in Regression*, Cross Validated Stack Exchange Website, retrieved November 25, 2015. 
 
 ### References
 
